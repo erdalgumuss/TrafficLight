@@ -97,7 +97,54 @@ mvn clean javafx:run
 **Erdal Gümüş**
 🔗 [github.com/erdalgumuss](https://github.com/erdalgumuss)
 
----
+---Yapılanlar:
+Bu projede sıfırdan gerçekçi ve modüler bir JavaFX tabanlı akıllı trafik ışığı simülasyonu inşa ettik. Neler yaptık, bir bakalım:
+
+MVC yapısını takip ettik. Model, Controller ve View katmanlarını net bir şekilde ayırdık.
+
+Trafik ışıkları dinamik sürelerle çalışıyor. Araç yoğunluğuna göre yeşil süreler otomatik hesaplanıyor.
+
+Araç üretimi gerçekçi. Her yön için rastgele araçlar oluşturuluyor (araba, kamyon, van) ve her biri bir şerit ve dönüş yönü alıyor.
+
+Simülasyon motoru saniye bazlı çalışıyor. Işıklar sırasıyla yeşil oluyor, araçlar sırayla çıkıyor.
+
+Animasyonlar eklendi: Araçlar doğuyor, hareket ediyor, dönüşlerde yumuşak eğrilerle dönüyor.
+
+UI paneli kullanımı kolay: Araç yoğunlukları giriliyor, görsel yoğunluk çubukları ve sayaçlar anlık güncelleniyor.
+
+İstatistikler gerçek zamanlı takip ediliyor: Geçen araç sayısı, ortalama bekleme süresi vs.
+
+🧱 Neleri Düzenlememiz Gerekiyor?
+Araçlar beklenmedik yerlerde doğabiliyor
+→ Spawn noktalarını daha doğru konumlandırmalıyız. Özellikle görseldeki yollarla hizalama gerek.
+
+Araçlar bazen üst üste biniyor veya ani kayboluyor
+→ Spawn sırasında çakışma kontrolü zaten yapılıyor ama layout pozisyonları daha hassas hale getirilmeli.
+
+Arka plan haritası statik
+→ Daha net bir harita resmi ve grid hizalaması yapılmalı. Belki daha yüksek çözünürlük veya vektörel çizim.
+
+Araçların dönüş animasyonları tam hizalı değil
+→ PathFactory üzerinde eğri koordinatlarını elden geçirip, dönüşlerin daha doğal görünmesini sağlayabiliriz.
+
+Pane üzerine aynı aracı tekrar ekleme hatası
+→ Pane’e aynı node birden fazla kez eklenince hata veriyor. Bu kontrolü daha erken yapmalıyız.
+
+🔜 Sıradaki Adımlar
+ Araç doğuş konumlarını, arka planla birebir hizala
+
+ Arka plan resmi üzerine şerit çizgileri ve yol numaraları ekle (gerekirse Paint’le geçici çözüm)
+
+ Dönüş path koordinatlarını test ederek düzenle
+
+ Simülasyon sonunda log veya CSV çıktısı üret (analiz için)
+
+ Kırmızı ışıkta geçen araçları logla (kural ihlali senaryosu)
+
+ Basit ses efektleri (yeşil ışık, araç hareketi vs.) entegre et
+
+ GitHub README görsellerle güncellenmeli
+
 
 ## 📁 Lisans
 
