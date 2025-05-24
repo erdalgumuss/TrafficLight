@@ -1,4 +1,3 @@
-// DensityVisualizer.java
 package com.traffic.view;
 
 import com.traffic.model.Direction;
@@ -23,11 +22,16 @@ public class DensityVisualizer {
         panel = new VBox(10);
         panel.setAlignment(Pos.CENTER_LEFT);
         panel.setPadding(new Insets(10));
+        panel.getStyleClass().add("panel"); // ✅ Panel CSS entegrasyonu
 
         for (Direction dir : Direction.values()) {
             Label label = new Label(dir.name() + ": 0");
-            Rectangle bar = new Rectangle(0, 20, Color.DARKBLUE);
+            label.setPrefWidth(60); // hizalama için sabit genişlik
+            label.setStyle("-fx-font-family: Consolas; -fx-font-size: 13;");
+
+            Rectangle bar = new Rectangle(0, 20);
             bar.setStroke(Color.BLACK);
+            bar.getStyleClass().add("density-bar"); // ✅ CSS sınıfı uygulandı
 
             bars.put(dir, bar);
             labels.put(dir, label);
@@ -43,8 +47,10 @@ public class DensityVisualizer {
         for (Direction dir : Direction.values()) {
             int value = densities.getOrDefault(dir, 0);
             double ratio = (double) value / max;
+
             Rectangle bar = bars.get(dir);
             Label label = labels.get(dir);
+
             bar.setWidth(200 * ratio);
             label.setText(dir.name() + ": " + value);
         }

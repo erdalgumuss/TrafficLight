@@ -1,101 +1,82 @@
 package com.traffic.view;
 
+import com.traffic.model.Direction;
 import com.traffic.model.Vehicle;
-import com.traffic.util.Constants;
-import com.traffic.view.animation.PathFactory;
+import com.traffic.utils.Constants;
 import javafx.animation.AnimationTimer;
-import javafx.animation.PathTransition;
 import javafx.scene.layout.Pane;
-import javafx.scene.shape.Path;
-import javafx.util.Duration;
 
 import java.util.*;
 
+/**
+ * Araçları sahnede yöneten animasyon sınıfı.
+ * Her aracın yönüne göre ışık durumu kontrol edilir.
+ */
 public class VehicleAnimator {
     private final Pane simulationPane;
-
-    // Sadece düz giden araçlar burada izlenir
-    private final List<Vehicle> straightMovingVehicles = new ArrayList<>();
-
-    // Dönüş animasyonundaki araçlar ayrı tutulur
-    private final Set<Vehicle> turningVehicles = new HashSet<>();
+    private final List<Vehicle> activeVehicles = new ArrayList<>();
+    private final Map<Direction, Boolean> greenLightStatus = new EnumMap<>(Direction.class);
 
     public VehicleAnimator(Pane simulationPane) {
         this.simulationPane = simulationPane;
-        startStraightVehicleLoop();
+
+        for (Direction dir : Direction.values()) {
+            greenLightStatus.put(dir, false); // tüm yönler başlangıçta kırmızı
+        }
+
+        startAnimationLoop();
     }
 
     public void spawnVehicle(Vehicle vehicle) {
-        double spawnX = vehicle.getLane().getSpawnPoint().getX();
-        double spawnY = vehicle.getLane().getSpawnPoint().getY();
-
-        vehicle.getShape().setLayoutX(spawnX);
-        vehicle.getShape().setLayoutY(spawnY);
-
         simulationPane.getChildren().add(vehicle.getShape());
-
-        if (vehicle.getTurn() == Vehicle.Turn.STRAIGHT) {
-            straightMovingVehicles.add(vehicle);
-        } else {
-            animateTurn(vehicle);
-        }
+        activeVehicles.add(vehicle);
     }
 
-    private void animateTurn(Vehicle vehicle) {
-        Path path = PathFactory.createTurnPath(vehicle);
-
-        PathTransition transition = new PathTransition();
-        transition.setNode(vehicle.getShape());
-        transition.setPath(path);
-        transition.setDuration(Duration.seconds(3 + Math.random() * 1.5));
-        transition.setOrientation(PathTransition.OrientationType.ORTHOGONAL_TO_TANGENT);
-
-        turningVehicles.add(vehicle);
-
-        transition.setOnFinished(e -> {
-            simulationPane.getChildren().remove(vehicle.getShape());
-            turningVehicles.remove(vehicle);
-        });
-
-        transition.play();
+    /**
+     * Işık değişimini dışarıdan haber alan callback.
+     */
+    public void updateGreenLight(Direction dir, boolean isGreen) {
+        greenLightStatus.put(dir, isGreen);
     }
 
-    private void startStraightVehicleLoop() {
+    private void startAnimationLoop() {
         AnimationTimer timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                Iterator<Vehicle> iterator = straightMovingVehicles.iterator();
+                Iterator<Vehicle> iterator = activeVehicles.iterator();
                 while (iterator.hasNext()) {
                     Vehicle v = iterator.next();
+                    Direction dir = v.getDirection();
 
-                    boolean atStop = v.hasReachedStopLine();
-                    boolean clearPath = true;
+                    boolean atStopLine = v.hasReachedStopLine();
+                    boolean isGreen = greenLightStatus.getOrDefault(dir, false);
 
+                    // Öndeki araçla güvenli mesafe kontrolü
                     Vehicle front = findFrontVehicle(v);
-                    if (front != null && v.distanceTo(front) < Constants.SAFE_DISTANCE) {
-                        clearPath = false;
+                    boolean hasSafeGap = front == null || v.distanceTo(front) >= Constants.SAFE_DISTANCE;
+
+                    // Yeni karar mantığı
+                    if (atStopLine) {
+                        if (isGreen && hasSafeGap) {
+                            v.move();
+                        }
+                    } else {
+                        v.move(); // henüz durma çizgisine gelmedi, hareket etmeye devam et
                     }
 
-                    if (!atStop || clearPath) {
-                        v.move();
-                    }
-
-                    double x = v.getShape().getLayoutX();
-                    double y = v.getShape().getLayoutY();
-                    if (x < -100 || x > Constants.SIMULATION_WIDTH + 100
-                            || y < -100 || y > Constants.SIMULATION_HEIGHT + 100) {
+                    // Ekran dışına çıktıysa temizle
+                    if (v.hasPassedIntersection()) {
                         simulationPane.getChildren().remove(v.getShape());
                         iterator.remove();
                     }
                 }
             }
         };
-
         timer.start();
     }
 
     private Vehicle findFrontVehicle(Vehicle current) {
-        return straightMovingVehicles.stream()
+        return activeVehicles.stream()
                 .filter(other -> other != current
                         && other.getDirection() == current.getDirection()
                         && !other.hasPassedIntersection())
@@ -104,12 +85,11 @@ public class VehicleAnimator {
     }
 
     public boolean willCollide(Vehicle newVehicle) {
-        return straightMovingVehicles.stream().anyMatch(existing -> existing.checkCollisionWith(newVehicle));
+        return activeVehicles.stream()
+                .anyMatch(existing -> existing.checkCollisionWith(newVehicle));
     }
 
     public List<Vehicle> getActiveVehicles() {
-        List<Vehicle> all = new ArrayList<>(straightMovingVehicles);
-        all.addAll(turningVehicles);
-        return all;
+        return new ArrayList<>(activeVehicles);
     }
 }

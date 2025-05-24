@@ -5,9 +5,6 @@ import com.traffic.model.Direction;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 
 public class StatsPanel {
     private final VBox panel;
@@ -17,44 +14,37 @@ public class StatsPanel {
     public StatsPanel() {
         panel = new VBox(15);
         panel.setPadding(new Insets(12));
-        panel.setStyle("-fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-radius: 6; -fx-background-radius: 6;");
+        panel.getStyleClass().add("panel"); // CSS panel stili
 
         // Başlık
         Label title = new Label("📊 Simülasyon İstatistikleri");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-        title.setTextFill(Color.DARKSLATEGRAY);
+        title.getStyleClass().add("title-label");
         panel.getChildren().add(title);
 
-        // Toplam
+        // Toplam geçen araç
         totalPassedLabel = new Label("Toplam Geçen Araç: 0");
-        totalPassedLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
-        totalPassedLabel.setTextFill(Color.BLACK);
+        totalPassedLabel.getStyleClass().add("label"); // isteğe bağlı sade stil
         panel.getChildren().add(totalPassedLabel);
 
-        // Yön başlıkları
+        // Her yön için istatistik etiketi
         directionLabels = new Label[Direction.values().length];
         int i = 0;
         for (Direction dir : Direction.values()) {
             Label label = new Label(formatDirectionText(dir, 0, 0.0));
-            label.setFont(Font.font("Consolas", 13));
-            label.setTextFill(Color.DIMGRAY);
+            label.getStyleClass().add("label"); // genel görünüm için
             directionLabels[i++] = label;
             panel.getChildren().add(label);
         }
     }
 
     public void update(SimulationStats stats) {
-        int total = stats.getTotalVehiclesPassed();
-        if (!totalPassedLabel.getText().endsWith(String.valueOf(total))) {
-            totalPassedLabel.setText("Toplam Geçen Araç: " + total);
-        }
+        totalPassedLabel.setText("Toplam Geçen Araç: " + stats.getTotalVehiclesPassed());
 
         int i = 0;
         for (Direction dir : Direction.values()) {
             int count = stats.getVehiclesPassed(dir);
             double avgWait = stats.getAverageWaitTime(dir);
-            directionLabels[i].setText(formatDirectionText(dir, count, avgWait));
-            i++;
+            directionLabels[i++].setText(formatDirectionText(dir, count, avgWait));
         }
     }
 
@@ -71,6 +61,6 @@ public class StatsPanel {
     }
 
     private String formatDirectionText(Direction dir, int count, double avgWait) {
-        return String.format("%-6s: %3d araç  |  Ortalama Bekleme: %4.1f sn", dir.name(), count, avgWait);
+        return String.format("%-6s: %3d araç  |  Ort. Bekleme: %5.1f sn", dir.name(), count, avgWait);
     }
 }

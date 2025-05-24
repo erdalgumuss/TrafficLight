@@ -1,25 +1,32 @@
 package com.traffic.controller;
 
+import com.traffic.factory.VehicleFactory;
 import com.traffic.model.Direction;
 import com.traffic.model.LightColor;
 import com.traffic.model.TrafficLight;
 import com.traffic.model.Vehicle;
-import com.traffic.util.Constants;
+import com.traffic.utils.Constants;
 import com.traffic.view.VehicleAnimator;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
+import java.util.EnumMap;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Random;
 
 public class TrafficSimulationEngine {
-    private final Map<Direction, TrafficLight> trafficLights;
-    private final VehicleQueueManager vehicleQueueManager;
+
+    public interface TrafficUpdateCallback {
+        void onTrafficLightUpdate(Direction dir, LightColor color, int remainingTime);
+    }
+
+    private final Map<Direction, TrafficLight> trafficLights = new EnumMap<>(Direction.class);
     private final Map<Direction, Integer> greenDurations;
-    private VehicleAnimator vehicleAnimator;
     private final TrafficUpdateCallback updateCallback;
-    private final SimulationStats stats;
+    private VehicleAnimator vehicleAnimator;
+
+    private final SimulationStats stats = new SimulationStats();
 
     private final Direction[] directionOrder = Direction.values();
     private int directionIndex = 0;
@@ -27,112 +34,84 @@ public class TrafficSimulationEngine {
 
     private boolean isYellowPhase = false;
     private int yellowTimer = 0;
-    private int vehicleSpawnCounter = 0;
 
-    private Timeline simulationTimer;
-
-    public interface TrafficUpdateCallback {
-        void onTrafficLightUpdate(Direction dir, LightColor color, int remainingTime);
-    }
+    private Timeline lightTimer;
+    private Timeline vehicleSpawnTimer;
 
     public TrafficSimulationEngine(Map<Direction, TrafficLight> trafficLights,
-                                   VehicleQueueManager queueManager,
                                    Map<Direction, Integer> greenDurations,
                                    VehicleAnimator vehicleAnimator,
                                    TrafficUpdateCallback updateCallback) {
-        this.trafficLights = trafficLights;
-        this.vehicleQueueManager = queueManager;
+        this.trafficLights.putAll(trafficLights);
         this.greenDurations = greenDurations;
         this.vehicleAnimator = vehicleAnimator;
         this.updateCallback = updateCallback;
-        this.stats = new SimulationStats();
-    }
-
-    /** Animatöre erişim sağlayan getter */
-    public VehicleAnimator getAnimator() {
-        return vehicleAnimator;
-    }
-
-    /** Animatörü değiştirmek için setter */
-    public void setAnimator(VehicleAnimator animator) {
-        this.vehicleAnimator = animator;
-    }
-
-    public boolean isGreen(Direction dir) {
-        TrafficLight light = trafficLights.get(dir);
-        return light != null && light.isGreen();
     }
 
     public void start() {
-        directionIndex    = 0;
-        currentDirection  = directionOrder[directionIndex];
+        directionIndex = 0;
+        currentDirection = directionOrder[directionIndex];
         setGreen(currentDirection);
 
-        simulationTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> tick()));
-        simulationTimer.setCycleCount(Timeline.INDEFINITE);
-        simulationTimer.play();
+        lightTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> tick()));
+        lightTimer.setCycleCount(Timeline.INDEFINITE);
+        lightTimer.play();
+
+        vehicleSpawnTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> spawnRandomVehicle()));
+        vehicleSpawnTimer.setCycleCount(Timeline.INDEFINITE);
+        vehicleSpawnTimer.play();
     }
 
     public void pause() {
-        if (simulationTimer != null) simulationTimer.pause();
+        if (lightTimer != null) lightTimer.pause();
+        if (vehicleSpawnTimer != null) vehicleSpawnTimer.pause();
     }
 
     public void stop() {
-        if (simulationTimer != null) simulationTimer.stop();
+        if (lightTimer != null) lightTimer.stop();
+        if (vehicleSpawnTimer != null) vehicleSpawnTimer.stop();
     }
 
     public void reset() {
         stop();
-        vehicleSpawnCounter = 0;
-        directionIndex      = 0;
-        isYellowPhase       = false;
+        directionIndex = 0;
+        isYellowPhase = false;
         for (Direction dir : Direction.values()) {
             TrafficLight tl = trafficLights.get(dir);
             tl.setColor(LightColor.RED);
             tl.setRemainingTime(0);
+            vehicleAnimator.updateGreenLight(dir, false);
         }
         stats.reset();
     }
 
     private void tick() {
-        // (A) Işık yönetimi
+        updateSignalTiming();
+        updateUI();
+    }
+
+    private void updateSignalTiming() {
         TrafficLight light = trafficLights.get(currentDirection);
         if (isYellowPhase) {
             if (--yellowTimer <= 0) {
-                isYellowPhase    = false;
-                directionIndex   = (directionIndex + 1) % directionOrder.length;
-                currentDirection = directionOrder[directionIndex];
+                isYellowPhase = false;
+                currentDirection = nextDirection();
                 setGreen(currentDirection);
             }
         } else {
             light.tick();
-            if (light.isTimeUp()) setYellow(currentDirection);
-        }
-
-        // (B) Araç çıkışı
-        vehicleSpawnCounter++;
-        if (vehicleSpawnCounter % Constants.VEHICLE_SPAWN_RATE == 0 && vehicleAnimator != null) {
-            Queue<Vehicle> queue = vehicleQueueManager.getQueue(currentDirection);
-            if (queue != null && !queue.isEmpty()) {
-                Vehicle vehicle = queue.peek();
-                if (!vehicleAnimator.willCollide(vehicle)) {
-                    vehicle = queue.poll();
-                    long waitTime = (System.currentTimeMillis() - vehicle.getEnqueueTime()) / 1000;
-                    stats.recordPass(currentDirection, (int) waitTime);
-                    vehicleAnimator.spawnVehicle(vehicle);
-                }
+            if (light.isTimeUp()) {
+                setYellow(currentDirection);
             }
-        }
-
-        // (C) UI güncelleme
-        for (Direction dir : Direction.values()) {
-            TrafficLight tl = trafficLights.get(dir);
-            updateCallback.onTrafficLightUpdate(dir, tl.getColor(), tl.getRemainingTime());
         }
     }
 
+    private Direction nextDirection() {
+        directionIndex = (directionIndex + 1) % directionOrder.length;
+        return directionOrder[directionIndex];
+    }
+
     private void setGreen(Direction dir) {
-        vehicleSpawnCounter = 0;
         trafficLights.values().forEach(tl -> {
             tl.setColor(LightColor.RED);
             tl.setRemainingTime(0);
@@ -141,14 +120,39 @@ public class TrafficSimulationEngine {
         TrafficLight tl = trafficLights.get(dir);
         tl.setColor(LightColor.GREEN);
         tl.setRemainingTime(greenTime);
+        vehicleAnimator.updateGreenLight(dir, true);
     }
 
     private void setYellow(Direction dir) {
         isYellowPhase = true;
-        yellowTimer   = Constants.YELLOW_DURATION;
+        yellowTimer = Constants.YELLOW_DURATION;
         TrafficLight tl = trafficLights.get(dir);
         tl.setColor(LightColor.YELLOW);
         tl.setRemainingTime(yellowTimer);
+        vehicleAnimator.updateGreenLight(dir, false);
+    }
+
+    private void updateUI() {
+        for (Direction dir : Direction.values()) {
+            TrafficLight tl = trafficLights.get(dir);
+            updateCallback.onTrafficLightUpdate(dir, tl.getColor(), tl.getRemainingTime());
+        }
+    }
+
+    private void spawnRandomVehicle() {
+        Direction[] directions = Direction.values();
+        Direction dir = directions[new Random().nextInt(directions.length)];
+        Vehicle vehicle = VehicleFactory.createVehicle(dir);
+        vehicle.setEnqueueTime(System.currentTimeMillis());
+        vehicleAnimator.spawnVehicle(vehicle);
+    }
+
+    public void setAnimator(VehicleAnimator animator) {
+        this.vehicleAnimator = animator;
+    }
+
+    public VehicleAnimator getAnimator() {
+        return vehicleAnimator;
     }
 
     public SimulationStats getStats() {

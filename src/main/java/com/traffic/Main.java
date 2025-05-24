@@ -4,7 +4,7 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import com.traffic.view.MainView;
-import com.traffic.util.Constants;
+import com.traffic.utils.Constants;
 
 public class Main extends Application {
     @Override
@@ -12,10 +12,11 @@ public class Main extends Application {
         MainView mainView = new MainView();
         Scene scene = new Scene(mainView.getRoot(), Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
 
-        scene.getStylesheets().add(getClass().getResource("/assets/styles.css").toExternalForm());
+        scene.getStylesheets().add(Main.class.getResource("/assets/styles.css").toExternalForm());
 
         primaryStage.setTitle("Akıllı Trafik Işığı Simülasyonu");
         primaryStage.setScene(scene);
+        primaryStage.centerOnScreen();
         primaryStage.show();
     }
 

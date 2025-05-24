@@ -4,7 +4,6 @@ import com.traffic.model.Direction;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -16,10 +15,12 @@ public class TimeIndicatorPanel {
     public TimeIndicatorPanel() {
         panel = new VBox(10);
         panel.setPadding(new Insets(10));
+        panel.getStyleClass().add("panel"); // 👈 CSS ile kart görünümü
 
         for (Direction dir : Direction.values()) {
-            Label label = new Label(formatLabelText(dir, 0, "RED")); // başlangıç için
-            label.setFont(Font.font("Consolas", 14));
+            Label label = new Label(formatLabelText(dir, 0, "RED"));
+            label.getStyleClass().add("label"); // 👈 Genel etiket stili
+            setLabelColor(label, "RED");        // 👈 Başlangıç rengi
             timeLabels.put(dir, label);
             panel.getChildren().add(label);
         }
@@ -40,6 +41,7 @@ public class TimeIndicatorPanel {
         Label label = timeLabels.get(dir);
         if (label != null) {
             label.setText(formatLabelText(dir, seconds, color));
+            setLabelColor(label, color);
         }
     }
 
@@ -55,5 +57,14 @@ public class TimeIndicatorPanel {
 
     private String formatLabelText(Direction dir, int seconds, String color) {
         return String.format("%-6s → %s (%ds)", dir.name(), color, seconds);
+    }
+
+    private void setLabelColor(Label label, String color) {
+        switch (color.toUpperCase()) {
+            case "GREEN" -> label.setStyle("-fx-text-fill: green;");
+            case "YELLOW" -> label.setStyle("-fx-text-fill: orange;");
+            case "RED" -> label.setStyle("-fx-text-fill: red;");
+            default -> label.setStyle("-fx-text-fill: black;");
+        }
     }
 }

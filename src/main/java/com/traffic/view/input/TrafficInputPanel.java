@@ -1,12 +1,8 @@
-// TrafficInputPanel.java
 package com.traffic.view.input;
 
 import com.traffic.model.Direction;
 import javafx.geometry.Insets;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextFormatter;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 
@@ -26,7 +22,7 @@ public class TrafficInputPanel {
 
         int row = 0;
         for (Direction dir : Direction.values()) {
-            Label label = new Label(dir.name() + " Araç:");
+            Label label = new Label(dir.toString() + " yönü:");
             TextField input = new TextField();
             input.setPromptText("örn: 10");
 
@@ -44,10 +40,9 @@ public class TrafficInputPanel {
         Button randomButton = new Button("Rastgele Doldur");
         randomButton.setOnAction(e -> fillWithRandomData());
 
-        panel = new VBox(10);
+        panel = new VBox(10, inputGrid, randomButton);
         panel.setPadding(new Insets(10));
         panel.setStyle("-fx-background-color: #ffffff; -fx-border-color: #ccc; -fx-border-radius: 5px;");
-        panel.getChildren().addAll(inputGrid, randomButton);
     }
 
     public VBox getPanel() {
@@ -59,11 +54,10 @@ public class TrafficInputPanel {
         for (Direction dir : Direction.values()) {
             try {
                 int count = Integer.parseInt(densityInputs.get(dir).getText());
-                if (count < 0) count = 0;
-                densityMap.put(dir, count);
+                densityMap.put(dir, Math.max(count, 0));
             } catch (NumberFormatException e) {
                 densityMap.put(dir, 0);
-                System.out.println("Geçersiz sayı girdisi: " + dir.name());
+                // UI alert eklenebilir
             }
         }
         return densityMap;

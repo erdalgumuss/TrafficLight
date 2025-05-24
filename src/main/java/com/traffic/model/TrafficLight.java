@@ -1,88 +1,64 @@
 package com.traffic.model;
 
-import com.traffic.util.Constants;
+import com.traffic.utils.Constants;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.util.Duration;
 
+import java.util.function.Consumer;
 public class TrafficLight {
     private final Direction direction;
-    private LightColor color;
+    private LightColor color = LightColor.RED;
+    private Timeline cycleTimer;
     private int remainingTime;
-    private int elapsedTime;
 
     public TrafficLight(Direction direction) {
         this.direction = direction;
-        this.color = LightColor.RED;
-        this.remainingTime = 0;
-        this.elapsedTime = 0;
     }
 
-    public Direction getDirection() {
-        return direction;
+    public void startCycle(int greenDuration) {
+        cycleTimer = new Timeline(
+                new KeyFrame(Duration.seconds(0), e -> {
+                    setColor(LightColor.GREEN);
+                    setRemainingTime(greenDuration);
+                }),
+                new KeyFrame(Duration.seconds(greenDuration), e -> {
+                    setColor(LightColor.YELLOW);
+                    setRemainingTime(Constants.YELLOW_DURATION);
+                }),
+                new KeyFrame(Duration.seconds(greenDuration + Constants.YELLOW_DURATION), e -> {
+                    setColor(LightColor.RED);
+                    setRemainingTime(0);
+                })
+        );
+        cycleTimer.setCycleCount(Timeline.INDEFINITE);
+        cycleTimer.play();
     }
 
-    public LightColor getColor() {
-        return color;
+    public void stopCycle() {
+        if (cycleTimer != null) cycleTimer.stop();
     }
 
-    public void setColor(LightColor color) {
-        this.color = color;
+    // ✔️ Gerekli getter/setter'lar
+    public void setColor(LightColor newColor) {
+        this.color = newColor;
     }
 
-    public int getRemainingTime() {
-        return remainingTime;
-    }
-
-    public void setRemainingTime(int remainingTime) {
-        this.remainingTime = remainingTime;
-        this.elapsedTime = 0;
-    }
-
-    public int getElapsedTime() {
-        return elapsedTime;
+    public void setRemainingTime(int time) {
+        this.remainingTime = time;
     }
 
     public void tick() {
-        if (remainingTime > 0) {
-            remainingTime--;
-            elapsedTime++;
-        }
+        if (remainingTime > 0) remainingTime--;
     }
 
     public boolean isTimeUp() {
         return remainingTime <= 0;
     }
 
-    /**
-     * Renk geçişi yapar ve sarı faz için süreyi ayarlar.
-     * Yeşilden sarıya geçişte Constants.YELLOW_DURATION kullanılır.
-     * Sarıdan kırmızıya geçişte süre sıfırlanır;
-     * kırmızıdan yeşile geçişte sürenin dışarıdan setlenmesi beklenir.
-     */
-    public void nextState() {
-        switch (color) {
-            case GREEN -> {
-                color = LightColor.YELLOW;
-                setRemainingTime(Constants.YELLOW_DURATION);
-            }
-            case YELLOW -> {
-                color = LightColor.RED;
-                setRemainingTime(0);
-            }
-            case RED -> {
-                color = LightColor.GREEN;
-                // Yeşil süresi engine tarafından setRemainingTime ile atanmalıdır
-            }
-        }
-    }
-
-    public boolean isRed() {
-        return color == LightColor.RED;
-    }
-
-    public boolean isYellow() {
-        return color == LightColor.YELLOW;
-    }
-
-    public boolean isGreen() {
-        return color == LightColor.GREEN;
-    }
+    public Direction getDirection() { return direction; }
+    public LightColor getColor() { return color; }
+    public int getRemainingTime() { return remainingTime; }
 }

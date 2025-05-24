@@ -1,4 +1,3 @@
-// SimulationControlPanel.java
 package com.traffic.view.controls;
 
 import javafx.geometry.Insets;
@@ -12,24 +11,23 @@ public class SimulationControlPanel {
     private final Button startButton;
     private final Button pauseButton;
     private final Button resetButton;
-    private final Button stopButton;
 
     public SimulationControlPanel() {
         startButton = new Button("Start");
         pauseButton = new Button("Pause");
         resetButton = new Button("Reset");
-        stopButton = new Button("Stop");
 
+        // CSS sınıflarını uygula
         startButton.getStyleClass().add("btn-start");
         pauseButton.getStyleClass().add("btn-pause");
         resetButton.getStyleClass().add("btn-reset");
-        stopButton.getStyleClass().add("btn-stop");
 
-        HBox buttonBox = new HBox(10, startButton, pauseButton, resetButton, stopButton);
+        HBox buttonBox = new HBox(10, startButton, pauseButton, resetButton);
         buttonBox.setAlignment(Pos.CENTER);
 
         panel = new VBox(10, buttonBox);
         panel.setPadding(new Insets(10));
+        panel.getStyleClass().add("panel"); // panel tasarımını uygula
 
         setInitialState();
     }
@@ -59,31 +57,21 @@ public class SimulationControlPanel {
         });
     }
 
-    public void setOnStop(Runnable action) {
-        stopButton.setOnAction(e -> {
-            action.run();
-            setInitialState();
-        });
-    }
-
     public void setInitialState() {
         startButton.setDisable(false);
         pauseButton.setDisable(true);
         resetButton.setDisable(true);
-        stopButton.setDisable(true);
     }
 
     public void setRunningState() {
         startButton.setDisable(true);
         pauseButton.setDisable(false);
         resetButton.setDisable(false);
-        stopButton.setDisable(false);
     }
 
     public void setPausedState() {
         startButton.setDisable(false);
         pauseButton.setDisable(true);
         resetButton.setDisable(false);
-        stopButton.setDisable(false);
     }
 }
